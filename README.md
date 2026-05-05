@@ -1,139 +1,114 @@
-# PIC18F46K22 Interrupt-Driven Digital Multimeter
+# PIC18F Digital Multimeter
 
-**Domain:** Embedded Systems · PIC18F Microcontroller  
-**Institution:** La Cité collégiale  
-**Date:** January – April 2026  
-**Author:** Adam Zaghloul  
-**Toolchain:** MPLAB X IDE · MCC (MPLAB Code Configurator) · XC8 v3.10 · PIC18F-K_DFP 1.14.301
+> Interrupt-driven embedded multimeter · DC Voltage (0–10 V) · Resistance (0–99.9 kΩ) · 3-digit 7-segment display  
+> **La Cité collégiale — Embedded Systems · Winter 2026**
+
+---
+
+## Photo
+
+![PIC18F Multimeter](../images/multimeter.jpg)
 
 ---
 
 ## Overview
 
-A fully interrupt-driven digital multimeter implemented on a PIC18F46K22 microcontroller. The DMM measures DC voltage (0–10 V) and resistance (0–99.9 kΩ), displays three-digit results on a multiplexed 7-segment display, and supports a 3-second hold mode. All button inputs are handled exclusively through external interrupt service routines — no polling anywhere in the design.
+A fully **interrupt-driven digital multimeter** built on the **PIC18F46K22** microcontroller. All measurement modes, display multiplexing, and button handling are implemented exclusively through hardware interrupts — no polling anywhere in the firmware.
 
-The firmware was developed with MCC-generated peripheral drivers and a custom `MultiM.h` library for modular architecture.
-
----
-
-## Features
-
-- **Voltmeter mode** — DC voltage measurement, 0–10 V range
-- **Ohmmeter mode** — Resistance measurement, 0–99.9 kΩ range  
-- **Hold mode** — Freezes display for 3 seconds on button press
-- **Sleep/wake logic** — Reduces power consumption when idle
-- **3-digit multiplexed 7-segment display** — Timer interrupt drives digit scanning
-- **3 mode buttons** — Each handled exclusively in ISR (no polling)
-- **ADC stability measures** — Averaging and settling time for accurate readings
+The project was developed using **MPLAB X IDE** with the **MCC (MPLAB Code Configurator)** peripheral setup tool and compiled with the **XC8** compiler. A custom `MultiM.h` library encapsulates all measurement logic.
 
 ---
 
-## Hardware
+## Specifications
 
-| Component | Part | Function |
-|-----------|------|----------|
-| Microcontroller | PIC18F46K22 | Main processor |
-| Display | 3-digit 7-segment (common cathode) | Numeric output |
-| Programmer | PICkit (snap module) | ICSP programming |
-| Mode Switch 1 | Push-button (INT0) | Voltmeter mode |
-| Mode Switch 2 | Push-button (INT1) | Ohmmeter mode |
-| Mode Switch 3 | Push-button (INT2) | Hold mode |
-| Resistor network | Various | Current limiting for segments |
-| NPN transistors | 2N3904 × 3 | Digit enable switching |
+| Parameter | Value |
+|-----------|-------|
+| Microcontroller | PIC18F46K22 |
+| Voltage range | 0 V – 10 V DC |
+| Resistance range | 0 Ω – 99.9 kΩ |
+| Display | 3-digit multiplexed 7-segment |
+| Operating modes | Voltmeter · Ohmmeter · Hold |
+| Mode switching | External interrupts (3 push-buttons, ISR only) |
+| Display refresh | Timer interrupt (TMR0) |
+| Hold duration | 3 seconds |
+| IDE | MPLAB X IDE |
+| Compiler | XC8 v3.10 |
+| Peripheral config | MCC (PIC18F-K DFP v1.14.301) |
 
 ---
 
 ## Firmware Architecture
 
 ```
-main.c
-├── MCC_Initialize()         — Configures all peripherals via MCC
-├── ADC_GetConversion()      — 10-bit ADC reading
-├── TMR0_ISR()               — 7-segment display multiplexing (Timer0)
-├── INT0_ISR()               — Voltmeter mode button handler
-├── INT1_ISR()               — Ohmmeter mode button handler
-├── INT2_ISR()               — Hold mode button handler
-└── MultiM.h / MultiM.c      — Custom library: conversion, display logic, hold timer
-
-MCC Generated Files:
-├── adc.c / adc.h
-├── ext_int.c / ext_int.h
-├── tmr0.c / tmr0.h
-├── interrupt_manager.c / interrupt_manager.h
-├── pin_manager.c / pin_manager.h
-└── device_config.c / device_config.h
-```
-
-**Key design decisions:**
-- All button events handled in ISRs — zero polling in `main()` loop
-- Hold mode implemented with a timer-based 3-second countdown in ISR context
-- ADC readings averaged over multiple samples for display stability
-- Sleep entered automatically after inactivity; any button wakes the MCU
-
----
-
-## Photos
-
-| View | Description |
-|------|-------------|
-| ![MPLAB project](images/mplab-project-tree.png) | MPLAB X IDE project structure |
-| ![Hardware build](images/multimeter-breadboard.jpg) | Breadboard — PIC18F46K22, 7-segment display, push-buttons, PICkit |
-| ![Compiler](images/compiler-version.png) | XC8 v3.10 compiler configuration |
-
----
-
-## Project Structure
-
-```
 EXAM.X/
 ├── Header Files/
 │   └── MCC Generated Files/
 │       ├── adc.h
-│       ├── device_config.h
 │       ├── ext_int.h
 │       ├── interrupt_manager.h
 │       ├── mcc.h
-│       ├── MultiM.h          ← Custom library
+│       ├── MultiM.h          ← Custom multimeter library
 │       ├── pin_manager.h
 │       └── tmr0.h
 └── Source Files/
     ├── main.c
     └── MCC Generated Files/
         ├── adc.c
-        ├── device_config.c
         ├── ext_int.c
         ├── interrupt_manager.c
         ├── mcc.c
-        ├── MultiM.c          ← Custom library
+        ├── MultiM.c          ← Custom multimeter logic
         ├── pin_manager.c
         └── tmr0.c
 ```
 
 ---
 
-## How to Build
+## How It Works
 
-**Requirements:**
-- MPLAB X IDE (tested with project at `C:\Users\...\EXAM.X`)
-- XC8 Compiler v3.10
-- PIC18F-K_DFP pack v1.14.301
-- PICkit 3/4 or SNAP programmer
+### ADC — Voltage Measurement
+The PIC18F46K22's 10-bit ADC samples the input voltage. The raw ADC result is scaled to the 0–10 V range and formatted as a 3-digit BCD value for display.
 
-**Steps:**
-1. Clone this repository
-2. Open `EXAM.X` in MPLAB X IDE
-3. Set compiler to XC8 v3.10
-4. Connect PICkit to PIC18F46K22 ICSP header
-5. Build and program
+### Resistance Measurement
+A known reference resistor forms a voltage divider with the unknown resistance. The ADC measures the divider output; firmware calculates the unknown resistance using the divider equation.
+
+### Interrupt-Driven Mode Switching
+Three external push-buttons trigger **external interrupt ISRs** (INT0, INT1, INT2):
+- **Button 1 (INT0)** → Voltmeter mode
+- **Button 2 (INT1)** → Ohmmeter mode  
+- **Button 3 (INT2)** → Hold mode (freezes displayed value for 3 seconds)
+
+Software debouncing is implemented inside each ISR.
+
+### Display Multiplexing (TMR0)
+**TMR0** fires a periodic interrupt that cycles through the 3 display digits, driving the appropriate segment and digit select lines. This happens transparently in the background while measurement ISRs run.
+
+### Hold Mode
+On Hold activation, the last measured value is latched in a variable. A 3-second timer (software counter incremented by TMR0 ISR) automatically releases Hold and returns to the active measurement mode.
+
+### Sleep / Wake Logic
+The MCU enters sleep between display refresh cycles to reduce power consumption, waking on the next TMR0 or external interrupt event.
+
+### ADC Stability
+Multiple ADC samples are averaged per reading to reduce noise, and a software settling delay is applied after each channel switch.
 
 ---
 
-## Key Skills Demonstrated
+## Key Peripherals Configured via MCC
 
-- PIC18F peripheral configuration via MCC (ADC, Timer0, External Interrupts)
-- Fully interrupt-driven embedded firmware architecture
-- Multiplexed 7-segment display driving via Timer ISR
-- Custom modular library development (`MultiM.h`)
-- ADC signal conditioning and averaging
-- Sleep/wake power management on PIC18F
-- MPLAB X IDE project structure and XC8 compiler toolchain
+| Peripheral | Function |
+|-----------|----------|
+| ADC | 10-bit, single channel, Fosc/64 clock |
+| TMR0 | 8-bit timer, periodic overflow → display multiplex ISR |
+| INT0 / INT1 / INT2 | External edge-triggered interrupts → mode switching ISRs |
+| Pin Manager | Segment outputs, digit selects, button inputs |
+
+---
+
+## Skills Demonstrated
+
+`PIC18F46K22` `MPLAB X IDE` `MCC` `XC8 compiler` `Embedded C` `ADC` `External interrupts (ISR)` `Timer interrupts` `7-segment multiplexing` `Software debouncing` `Modular firmware architecture` `Sleep/wake logic`
+
+---
+
+*Adam Zaghloul · La Cité collégiale · Winter 2026 · [adamzaghloul07@gmail.com](mailto:adamzaghloul07@gmail.com)*
