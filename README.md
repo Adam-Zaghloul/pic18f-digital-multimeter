@@ -7,7 +7,7 @@
 
 ## Photo
 
-![PIC18F Multimeter](../images/multimeter.jpg)
+![PIC18F Multimeter](multimeter.jpg)
 
 ---
 
